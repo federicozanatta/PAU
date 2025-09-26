@@ -1,6 +1,8 @@
 const { Producto, Categoria, Administrador } = require("../models/index.model");
 const { Variante, Mensaje } = require("../models/index.model");
 const { validationResult } = require("express-validator");
+const fs = require("fs");
+const path = require("path");
 
 // Obtener todos los productos
 const getProductos = async (req, res) => {
@@ -130,12 +132,14 @@ const createProducto = async (req, res) => {
       precio,
       descripcion,
       stock,
-      imagen,
       oferta,
       descuento,
       idAdministrador,
       idCategoria,
     } = req.body;
+
+    // Obtener el nombre del archivo subido
+    const imagen = req.file ? req.file.filename : null;
 
     const nuevoProducto = await Producto.create({
       nombre,
@@ -156,6 +160,15 @@ const createProducto = async (req, res) => {
     });
   } catch (err) {
     console.error("Error en createProducto:", err);
+    
+    // Si hay error y se subió un archivo, eliminarlo
+    if (req.file) {
+      const filePath = path.join(__dirname, '../uploads', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    
     res.status(500).json({
       success: false,
       error: "Error interno del servidor",
@@ -186,7 +199,21 @@ const updateProducto = async (req, res) => {
       });
     }
 
-    await producto.update(req.body);
+    const updateData = { ...req.body };
+    
+    // Si se subió una nueva imagen
+    if (req.file) {
+      // Eliminar imagen anterior si existe
+      if (producto.imagen) {
+        const oldImagePath = path.join(__dirname, '../uploads', producto.imagen);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      updateData.imagen = req.file.filename;
+    }
+
+    await producto.update(updateData);
 
     res.json({
       success: true,
@@ -195,6 +222,15 @@ const updateProducto = async (req, res) => {
     });
   } catch (err) {
     console.error("Error en updateProducto:", err);
+    
+    // Si hay error y se subió un archivo, eliminarlo
+    if (req.file) {
+      const filePath = path.join(__dirname, '../uploads', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    
     res.status(500).json({
       success: false,
       error: "Error interno del servidor",
@@ -214,6 +250,14 @@ const deleteProducto = async (req, res) => {
         success: false,
         error: "Producto no encontrado",
       });
+    }
+
+    // Eliminar imagen asociada si existe
+    if (producto.imagen) {
+      const imagePath = path.join(__dirname, '../uploads', producto.imagen);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
     }
 
     await producto.destroy();

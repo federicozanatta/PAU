@@ -54,6 +54,18 @@ export const CartProvider = ({ children }) => {
     });
   };
 
+  // Decrementar una unidad sin eliminar completamente
+  const decrementOne = (productoId) => {
+    setCartItems(prevItems => {
+      return prevItems.map(item => {
+        if (item.id === productoId && item.cantidad > 1) {
+          return { ...item, cantidad: item.cantidad - 1 };
+        }
+        return item;
+      });
+    });
+  };
+
   // Obtener cantidad total de productos
   const getTotalItems = () => {
     return cartItems.reduce((total, item) => total + item.cantidad, 0);
@@ -85,6 +97,7 @@ export const CartProvider = ({ children }) => {
     addToCart,
     removeFromCart,
     decrementQuantity,
+    decrementOne,
     getTotalItems,
     getTotalPrice,
     isInCart,

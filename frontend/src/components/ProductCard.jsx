@@ -76,7 +76,7 @@ const ProductCard = ({ producto, votos }) => {
       <CardMedia
         component="img"
         height="200"
-        image={producto.imagen}
+        image={producto.imagen ? `http://localhost:3000/uploads/${producto.imagen}` : 'https://via.placeholder.com/300x200?text=Sin+Imagen'}
         alt={producto.nombre}
         sx={{
           objectFit: "cover",

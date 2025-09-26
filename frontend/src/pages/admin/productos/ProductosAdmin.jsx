@@ -54,12 +54,15 @@ const ProductosAdmin = () => {
     precio: "",
     descripcion: "",
     stock: "",
-    imagen: "",
     oferta: false,
     descuento: 0,
     idCategoria: "",
     idAdministrador: 1, // Valor fijo por ahora
   });
+
+  // Estado para manejar el archivo de imagen
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // useEffect que se ejecuta cuando cambia la página
 
@@ -102,12 +105,15 @@ const ProductosAdmin = () => {
         precio: product.precio,
         descripcion: product.descripcion,
         stock: product.stock,
-        imagen: product.imagen,
         oferta: product.oferta,
         descuento: product.descuento,
         idCategoria: product.idCategoria,
         idAdministrador: product.idAdministrador,
       });
+      // Mostrar imagen actual si existe
+      if (product.imagen) {
+        setImagePreview(`http://localhost:3000/uploads/${product.imagen}`);
+      }
     } else {
       setEditingProduct(null);
       setFormData({
@@ -115,12 +121,13 @@ const ProductosAdmin = () => {
         precio: "",
         descripcion: "",
         stock: "",
-        imagen: "",
         oferta: false,
         descuento: 0,
         idCategoria: "",
         idAdministrador: 1,
       });
+      setImageFile(null);
+      setImagePreview(null);
     }
     setOpenDialog(true);
   };
@@ -128,26 +135,63 @@ const ProductosAdmin = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingProduct(null);
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-
       [name]: type === "checkbox" ? checked : value,
     }));
   };
 
+  // Manejar cambio de archivo de imagen
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      // Crear preview de la imagen
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
+      // Crear FormData para enviar archivo
+      const submitData = new FormData();
+      
+      // Agregar todos los campos del formulario
+      Object.keys(formData).forEach(key => {
+        submitData.append(key, formData[key]);
+      });
+      
+      // Agregar imagen si se seleccionó una
+      if (imageFile) {
+        submitData.append('imagen', imageFile);
+      }
+
       if (editingProduct) {
         await axios.put(
           `http://localhost:3000/api/productos/${editingProduct.id}`,
-          formData
+          submitData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
         );
       } else {
-        await axios.post("http://localhost:3000/api/productos", formData);
+        await axios.post("http://localhost:3000/api/productos", submitData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
       }
 
       fetchProductos();
@@ -322,13 +366,31 @@ const ProductosAdmin = () => {
             />
 
             {/* Campo imagen */}
-            <TextField
-              name="imagen"
-              label="URL de Imagen"
-              value={formData.imagen}
-              onChange={handleInputChange}
-              fullWidth
-            />
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Imagen del Producto
+              </Typography>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                style={{ marginBottom: '16px' }}
+              />
+              {imagePreview && (
+                <Box sx={{ mt: 2 }}>
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    style={{
+                      maxWidth: '200px',
+                      maxHeight: '200px',
+                      objectFit: 'cover',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </Box>
+              )}
+            </Box>
 
             {/* Selector de categoría */}
             <FormControl fullWidth>
