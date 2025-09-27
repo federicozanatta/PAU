@@ -15,6 +15,7 @@ import ProductosAdmin from "./pages/admin/productos/ProductosAdmin";
 import CategoriasAdmin from "./pages/admin/categorias/CategoriasAdmin";
 import AdministradoresAdmin from "./pages/admin/administradores/AdministradoresAdmin";
 import CuponesAdmin from "./pages/admin/cupones/CuponesAdmin";
+import { ChatbotWidget } from "./components/Chatbot";
 
 const App = () => {
   return (
@@ -41,6 +42,9 @@ const App = () => {
           <Route path="cupones" element={<CuponesAdmin />} />
         </Route>
       </Routes>
+      
+      {/* Chatbot disponible en todas las páginas */}
+      <ChatbotWidget />
     </ThemeProvider>
   );
 };

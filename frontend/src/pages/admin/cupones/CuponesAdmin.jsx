@@ -97,7 +97,7 @@ const CuponesAdmin = () => {
             <TableRow>
               <TableCell>Nombre</TableCell>
               <TableCell>Código</TableCell>
-              <TableCell>Descuento (%)</TableCell>
+              <TableCell align="right">Descuento (%)</TableCell>
               <TableCell>Activo</TableCell>
               <TableCell>Acciones</TableCell>
             </TableRow>
@@ -107,7 +107,7 @@ const CuponesAdmin = () => {
               <TableRow key={c.id}>
                 <TableCell>{c.nombreCupon}</TableCell>
                 <TableCell>{c.codigoCupon}</TableCell>
-                <TableCell>{c.porcentajeDescuento}</TableCell>
+                <TableCell align="right">{c.porcentajeDescuento}%</TableCell>
                 <TableCell>{c.activo ? "Sí" : "No"}</TableCell>
                 <TableCell>
                   <IconButton onClick={() => handleOpenDialog(c)}><EditIcon /></IconButton>

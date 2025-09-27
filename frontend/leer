@@ -1,0 +1,49 @@
+npm add @google/generative-ai
+1. Corrección de estilos en tablas del panel de administración
+
+✅ Alineación de columnas numéricas:
+
+    En ProductosAdmin: Las columnas "Precio" y "Stock" ahora están alineadas a la derecha
+    En CuponesAdmin: La columna "Descuento (%)" está alineada a la derecha y muestra el símbolo %
+    Mantiene el diseño existente de Material UI
+
+2. Chatbot con Gemini AI
+
+✅ Implementación completa del chatbot:
+Características principales:
+
+    Widget flotante en esquina inferior derecha, disponible en todas las páginas
+    Interfaz moderna con Material UI, consistente con tu diseño
+    Integración segura con Gemini AI usando variables de entorno
+    Contexto inteligente que conoce tus productos, categorías y ofertas
+
+Funcionalidades avanzadas:
+
+    Detección de intenciones: Reconoce consultas sobre precios, stock, descuentos, contacto
+    Datos en tiempo real: Se actualiza automáticamente con información de tu base de datos
+    Respuestas contextualizadas: Incluye información específica sobre Divino Diseño
+    Interfaz conversacional: Avatar, indicador de "escribiendo", scroll automático
+
+Configuración necesaria:
+
+    Obtener API Key de Gemini:
+        Ve a Google AI Studio
+        Crea una nueva API key
+
+    Configurar variables de entorno:
+
+    # En la carpeta frontend, crea un archivo .env
+    VITE_GEMINI_API_KEY=tu_api_key_aqui
+
+    El chatbot ya está integrado y aparecerá automáticamente en todas las páginas.
+
+Extensibilidad:
+
+El sistema está diseñado para ser fácilmente extensible:
+
+    Hook personalizado (useChatbot.js) para agregar más funcionalidades
+    Contexto enriquecido con datos reales de productos y categorías
+    Sistema de intenciones para respuestas más precisas
+
+
+

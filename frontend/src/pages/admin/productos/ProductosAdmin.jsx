@@ -251,8 +251,8 @@ const ProductosAdmin = () => {
           <TableHead>
             <TableRow>
               <TableCell>Nombre</TableCell>
-              <TableCell>Precio</TableCell>
-              <TableCell>Stock</TableCell>
+              <TableCell align="right">Precio</TableCell>
+              <TableCell align="right">Stock</TableCell>
               <TableCell>Categoría</TableCell>
               <TableCell>Acciones</TableCell>
             </TableRow>
@@ -265,10 +265,10 @@ const ProductosAdmin = () => {
                 <TableCell>
                   <Typography variant="subtitle2">{producto.nombre}</Typography>
                 </TableCell>
-                <TableCell>
+                <TableCell align="right">
                   <Typography variant="body1">${producto.precio}</Typography>
                 </TableCell>
-                <TableCell>
+                <TableCell align="right">
                   <Typography variant="body1">{producto.stock}</Typography>
                 </TableCell>
                 <TableCell>
