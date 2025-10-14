@@ -1,4 +1,5 @@
-import { createContext, useState, useContext } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
+import { useAuth } from './Auth.context';
 
 const CartContext = createContext();
 
@@ -10,8 +11,35 @@ export const useCart = () => {
   return context;
 };
 
+const getCartStorageKey = (userEmail) => {
+  return userEmail ? `cart_${userEmail}` : 'cart_guest';
+};
+
+const loadCartFromStorage = (userEmail) => {
+  try {
+    const key = getCartStorageKey(userEmail);
+    const storedCart = localStorage.getItem(key);
+    return storedCart ? JSON.parse(storedCart) : [];
+  } catch (error) {
+    console.error('Error al cargar carrito desde localStorage:', error);
+    return [];
+  }
+};
+
+const saveCartToStorage = (userEmail, cartItems) => {
+  try {
+    const key = getCartStorageKey(userEmail);
+    localStorage.setItem(key, JSON.stringify(cartItems));
+  } catch (error) {
+    console.error('Error al guardar carrito en localStorage:', error);
+  }
+};
+
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
+  const { user } = useAuth();
+  const userEmail = user?.email || null;
+
+  const [cartItems, setCartItems] = useState(() => loadCartFromStorage(userEmail));
 
   // Agregar producto al carrito
   const addToCart = (producto) => {
@@ -87,10 +115,18 @@ export const CartProvider = ({ children }) => {
     return item ? item.cantidad : 0;
   };
 
-  // Limpiar carrito
   const clearCart = () => {
     setCartItems([]);
   };
+
+  useEffect(() => {
+    saveCartToStorage(userEmail, cartItems);
+  }, [cartItems, userEmail]);
+
+  useEffect(() => {
+    const storedCart = loadCartFromStorage(userEmail);
+    setCartItems(storedCart);
+  }, [userEmail]);
 
   const value = {
     cartItems,
