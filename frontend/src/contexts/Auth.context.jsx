@@ -82,11 +82,28 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common['Authorization'];
   };
 
+  const loginWithGoogle = () => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+    window.location.href = `${backendUrl}/api/auth/google`;
+  };
+
+  const handleGoogleCallback = (accessToken, refreshToken) => {
+    localStorage.setItem('token', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+    setToken(accessToken);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+    setUser({ tipo: 'cliente' });
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
+    loginWithGoogle,
+    handleGoogleCallback,
     loading,
     isAuthenticated: !!token
   };

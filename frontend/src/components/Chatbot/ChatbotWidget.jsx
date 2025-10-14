@@ -5,21 +5,22 @@ import {
   IconButton,
   Typography,
   TextField,
-  Button,
   List,
   ListItem,
-  ListItemText,
-  Fade,
   CircularProgress,
   Avatar,
-  Divider
+  Divider,
+  Fade
 } from '@mui/material';
+import PersonIcon from '@mui/icons-material/Person';
+import CreateIcon from '@mui/icons-material/Create';
+
 import {
   Chat as ChatIcon,
   Close as CloseIcon,
   Send as SendIcon,
   SmartToy as BotIcon,
-  Person as PersonIcon
+  
 } from '@mui/icons-material';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useChatbot } from '../../hooks/useChatbot';
@@ -55,6 +56,7 @@ const ChatbotWidget = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Enviar mensaje
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
@@ -92,23 +94,26 @@ const ChatbotWidget = () => {
     }
   };
 
+  // Generar respuesta usando Gemini AI
   const generateBotResponse = async (userInput) => {
     if (!genAI.current) {
       return 'Lo siento, el servicio de chat no está disponible en este momento.';
     }
 
     try {
-      const model = genAI.current.getGenerativeModel({ model: 'gemini-pro' });
-      
-      // Usar contexto enriquecido con datos reales
+      // Aquí usamos el modelo actualizado
+      const model = genAI.current.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+
+      // Obtener contexto enriquecido
       const context = generateEnhancedContext(userInput);
       const intent = detectIntent(userInput);
-      
-      console.log('Intent detectado:', intent); // Para debugging
+      console.log('Intent detectado:', intent);
 
+      // Generar contenido
       const result = await model.generateContent(context);
       const response = await result.response;
-      return response.text();
+      return response.text(); // Texto final del bot
     } catch (error) {
       console.error('Error con Gemini AI:', error);
       return 'Lo siento, no pude procesar tu consulta en este momento. ¿Podrías intentar reformular tu pregunta?';
@@ -181,8 +186,8 @@ const ChatbotWidget = () => {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <BotIcon />
-              <Typography variant="h6">Asistente Virtual</Typography>
+              <CreateIcon />
+              <Typography variant="h6">Divino asistente</Typography>
             </Box>
             <IconButton
               size="small"
@@ -194,13 +199,7 @@ const ChatbotWidget = () => {
           </Box>
 
           {/* Área de mensajes */}
-          <Box
-            sx={{
-              flexGrow: 1,
-              overflow: 'auto',
-              backgroundColor: '#f5f5f5',
-            }}
-          >
+          <Box sx={{ flexGrow: 1, overflow: 'auto', backgroundColor: '#f5f5f5' }}>
             <List sx={{ p: 1 }}>
               {messages.map((message) => (
                 <ListItem
@@ -220,7 +219,7 @@ const ChatbotWidget = () => {
                       mx: 1,
                     }}
                   >
-                    {message.sender === 'user' ? <PersonIcon /> : <BotIcon />}
+                    {message.sender === 'user' ? <PersonIcon /> : <CreateIcon />}
                   </Avatar>
                   <Paper
                     sx={{

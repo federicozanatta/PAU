@@ -17,6 +17,7 @@ import LoginModal from "./LoginModal";
 import CartModal from "./CartModal";
 import { Badge } from "@mui/material";
 import logo1 from "../assets/logo1.jpg";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -43,22 +44,17 @@ const Header = () => {
       <AppBar position="static" color="secondary">
         <Container>
           <Toolbar>
-            <IconButton
-              edge="start"
-              color="inherit"
-              aria-label="menu"
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
+            
             {/*Logo y nombre */}
             <Box sx={{ flexGrow: 1, display: "flex", alignItems: "center" }}>
               {
+                <Link to="/" style={{ textDecoration: "none" }}>
                 <img
                   src={logo1}
                   alt="Logo de Divino Diseño"
                   style={{ height: 80, margin: 16 }}
                 />
+                </Link>
               }
               <Typography variant="h6" component="div">
                 Divino Diseño

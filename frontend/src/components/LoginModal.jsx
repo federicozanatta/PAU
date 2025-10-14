@@ -14,8 +14,10 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Divider
 } from '@mui/material';
+import GoogleIcon from '@mui/icons-material/Google';
 import { useAuth } from '../contexts/Auth.context';
 
 const LoginModal = ({ open, onClose }) => {
@@ -35,12 +37,16 @@ const LoginModal = ({ open, onClose }) => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, register } = useAuth();
+  const { login, register, loginWithGoogle } = useAuth();
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
     setError('');
     setSuccess('');
+  };
+
+  const handleGoogleLogin = () => {
+    loginWithGoogle();
   };
 
   const handleLoginChange = (e) => {
@@ -120,6 +126,32 @@ const LoginModal = ({ open, onClose }) => {
 
         {tabValue === 0 && (
           <Box component="form" onSubmit={handleLogin} sx={{ mt: 1 }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              sx={{
+                mb: 2,
+                py: 1.5,
+                textTransform: 'none',
+                borderColor: '#dadce0',
+                color: '#3c4043',
+                '&:hover': {
+                  borderColor: '#dadce0',
+                  backgroundColor: '#f8f9fa',
+                }
+              }}
+            >
+              Continuar con Google
+            </Button>
+
+            <Divider sx={{ my: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                O
+              </Typography>
+            </Divider>
+
             <TextField
               margin="normal"
               required

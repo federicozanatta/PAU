@@ -18,7 +18,7 @@ import {
   TextField,
   FormControlLabel,
   Switch,
-  Pagination, // Se reemplaza TablePagination por Pagination
+  Pagination,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -28,36 +28,36 @@ import {
 import axios from 'axios';
 
 const CategoriasAdmin = () => {
-  // ========== ESTADOS DEL COMPONENTE ==========
   const [categorias, setCategorias] = useState([]);
-  
-  // El estado de la página ahora comienza en 1
-  const [page, setPage] = useState(1); 
-  
-  // Se define un número fijo de filas por página
-  const rowsPerPage = 10; 
-  
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
   const [totalItems, setTotalItems] = useState(0);
+
+  // Modal
   const [openDialog, setOpenDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+
+  // Formulario
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
-    imagenUrl: '',
     activa: true,
   });
 
-  // ========== EFECTOS ==========
-  // El efecto ahora solo depende del cambio de página
+  // Imagen
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  // Fetch categorías
   useEffect(() => {
     fetchCategorias();
   }, [page]);
 
-  // ========== FUNCIONES DE API ==========
   const fetchCategorias = async () => {
     try {
-      // Se ajusta la llamada a la API para que coincida con el estado 'page'
-      const response = await axios.get(`http://localhost:3000/api/categorias?page=${page}&limit=${rowsPerPage}&activo=all`);
+      const response = await axios.get(
+        `http://localhost:3000/api/categorias?page=${page}&limit=${rowsPerPage}&activo=all`
+      );
       setCategorias(response.data.data);
       setTotalItems(response.data.pagination.totalItems);
     } catch (error) {
@@ -65,13 +65,7 @@ const CategoriasAdmin = () => {
     }
   };
 
-  // ========== MANEJADORES DE EVENTOS ==========
-  // La función se mantiene igual que en el primer componente
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-  
-  // La función handleChangeRowsPerPage ya no es necesaria y se elimina
+  const handleChangePage = (event, newPage) => setPage(newPage);
 
   const handleOpenDialog = (category = null) => {
     if (category) {
@@ -79,17 +73,21 @@ const CategoriasAdmin = () => {
       setFormData({
         nombre: category.nombre,
         descripcion: category.descripcion || '',
-        imagenUrl: category.imagenUrl || '',
         activa: category.activa,
       });
+      setImagePreview(
+        category.imagenUrl
+          ? category.imagenUrl.startsWith('http')
+            ? category.imagenUrl
+            : `http://localhost:3000/uploads/${category.imagenUrl}`
+          : null
+      );
+      setImageFile(null);
     } else {
       setEditingCategory(null);
-      setFormData({
-        nombre: '',
-        descripcion: '',
-        imagenUrl: '',
-        activa: true,
-      });
+      setFormData({ nombre: '', descripcion: '', activa: true });
+      setImageFile(null);
+      setImagePreview(null);
     }
     setOpenDialog(true);
   };
@@ -97,15 +95,49 @@ const CategoriasAdmin = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingCategory(null);
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
   };
 
   const handleSubmit = async () => {
     try {
+      const submitData = new FormData();
+      submitData.append('nombre', formData.nombre);
+      submitData.append('descripcion', formData.descripcion);
+      submitData.append('activa', formData.activa);
+
+      if (imageFile) submitData.append('imagen', imageFile);
+
       if (editingCategory) {
-        await axios.put(`http://localhost:3000/api/categorias/${editingCategory.id}`, formData);
+        await axios.put(
+          `http://localhost:3000/api/categorias/${editingCategory.id}`,
+          submitData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
       } else {
-        await axios.post('http://localhost:3000/api/categorias', formData);
+        await axios.post(
+          'http://localhost:3000/api/categorias',
+          submitData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
       }
+
       fetchCategorias();
       handleCloseDialog();
     } catch (error) {
@@ -114,7 +146,7 @@ const CategoriasAdmin = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta categoría?')) {
+    if (window.confirm('¿Estás seguro de eliminar esta categoría?')) {
       try {
         await axios.delete(`http://localhost:3000/api/categorias/${id}`);
         fetchCategorias();
@@ -124,24 +156,17 @@ const CategoriasAdmin = () => {
     }
   };
 
-
   const totalPages = Math.ceil(totalItems / rowsPerPage);
 
   return (
     <Box>
+      {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1" fontWeight="bold">
-          Categorías
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Agregar Categoría
-        </Button>
+        <Typography variant="h4" fontWeight="bold">Categorías</Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>Agregar Categoría</Button>
       </Box>
 
+      {/* Tabla */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -149,32 +174,28 @@ const CategoriasAdmin = () => {
               <TableCell>Nombre</TableCell>
               <TableCell>Descripción</TableCell>
               <TableCell>Estado</TableCell>
+              <TableCell>Imagen</TableCell>
               <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {categorias.map((categoria) => (
-              <TableRow key={categoria.id}>
+            {categorias.map(c => (
+              <TableRow key={c.id}>
+                <TableCell>{c.nombre}</TableCell>
+                <TableCell>{c.descripcion || 'Sin descripción'}</TableCell>
+                <TableCell>{c.activa ? 'Activa' : 'Inactiva'}</TableCell>
                 <TableCell>
-                  <Typography variant="subtitle2">{categoria.nombre}</Typography>
+                  {c.imagenUrl ? (
+                    <img
+                      src={c.imagenUrl.startsWith('http') ? c.imagenUrl : `http://localhost:3000/uploads/${c.imagenUrl}`}
+                      alt={c.nombre}
+                      style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
+                    />
+                  ) : 'N/A'}
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2">
-                    {categoria.descripcion || 'Sin descripción'}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">
-                    {categoria.activa ? 'Activa' : 'Inactiva'}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <IconButton size="small" onClick={() => handleOpenDialog(categoria)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => handleDelete(categoria.id)}>
-                    <DeleteIcon />
-                  </IconButton>
+                  <IconButton size="small" onClick={() => handleOpenDialog(c)}><EditIcon /></IconButton>
+                  <IconButton size="small" onClick={() => handleDelete(c.id)}><DeleteIcon /></IconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -182,30 +203,31 @@ const CategoriasAdmin = () => {
         </Table>
       </TableContainer>
 
- 
+      {/* Paginación */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-        <Pagination
-          count={totalPages}
-          page={page}
-          onChange={handleChangePage}
-          color="primary"
-          showFirstButton
-          showLastButton
-        />
+        <Pagination count={totalPages} page={page} onChange={handleChangePage} color="primary" showFirstButton showLastButton />
       </Box>
 
+      {/* Modal */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
-        </DialogTitle>
+        <DialogTitle>{editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}</DialogTitle>
         <DialogContent>
-          {/* ... (contenido del modal sin cambios) ... */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField name="nombre" label="Nombre" value={formData.nombre} onChange={handleInputChange} fullWidth required />
+            <TextField name="descripcion" label="Descripción" value={formData.descripcion} onChange={handleInputChange} fullWidth multiline rows={2} />
+            
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>Imagen de la categoría</Typography>
+              <input type="file" accept="image/*" onChange={handleImageChange} style={{ marginBottom: 16 }} />
+              {imagePreview && <img src={imagePreview} alt="Preview" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8 }} />}
+            </Box>
+
+            <FormControlLabel control={<Switch name="activa" checked={formData.activa} onChange={handleInputChange} />} label="Activa" />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            {editingCategory ? 'Actualizar' : 'Crear'}
-          </Button>
+          <Button onClick={handleSubmit} variant="contained">{editingCategory ? 'Actualizar' : 'Crear'}</Button>
         </DialogActions>
       </Dialog>
     </Box>

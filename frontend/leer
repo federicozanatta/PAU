@@ -1,11 +1,5 @@
 npm add @google/generative-ai
-1. Corrección de estilos en tablas del panel de administración
 
-✅ Alineación de columnas numéricas:
-
-    En ProductosAdmin: Las columnas "Precio" y "Stock" ahora están alineadas a la derecha
-    En CuponesAdmin: La columna "Descuento (%)" está alineada a la derecha y muestra el símbolo %
-    Mantiene el diseño existente de Material UI
 
 2. Chatbot con Gemini AI
 

@@ -141,3 +141,21 @@ exports.refreshToken = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.googleCallback = async (req, res, next) => {
+  try {
+    const usuario = req.user;
+
+    if (!usuario) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=auth_failed`);
+    }
+
+    const tokens = generateTokens(usuario, 'cliente');
+
+    res.redirect(
+      `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`
+    );
+  } catch (error) {
+    next(error);
+  }
+};

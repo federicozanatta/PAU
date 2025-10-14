@@ -74,16 +74,41 @@ const ProductCard = ({ producto, votos }) => {
       )}
 
       <CardMedia
-        component="img"
-        height="200"
-        image={producto.imagen ? `http://localhost:3000/uploads/${producto.imagen}` : 'https://via.placeholder.com/300x200?text=Sin+Imagen'}
-        alt={producto.nombre}
-        sx={{
-          objectFit: "cover",
-          width: "100%",
-          maxHeight: 200,
-        }}
-      />
+  component="img"
+  height="200"
+  image={(() => {
+    // Manejo flexible del campo 'imagenes'
+    let imagenes = [];
+
+    try {
+      if (typeof producto.imagenes === "string") {
+        imagenes = JSON.parse(producto.imagenes);
+      } else if (Array.isArray(producto.imagenes)) {
+        imagenes = producto.imagenes;
+      } else if (producto.imagen) {
+        imagenes = [producto.imagen];
+      }
+    } catch (error) {
+      console.warn("Error parseando imágenes:", error);
+    }
+
+    if (imagenes.length > 0) {
+      const primera = imagenes[0];
+      return primera.startsWith("http")
+        ? primera
+        : `http://localhost:3000/uploads/${primera}`;
+    } else {
+      return "https://placehold.co/300x200?text=Sin+Imagen";
+    }
+  })()}
+  alt={producto.nombre}
+  sx={{
+    objectFit: "cover",
+    width: "100%",
+    maxHeight: 200,
+  }}
+/>
+
 
       <CardContent sx={{ flexGrow: 1 }}>
         {/* Nombre del producto */}
@@ -91,15 +116,7 @@ const ProductCard = ({ producto, votos }) => {
           {producto.nombre}
         </Typography>
 
-        {/* Descripción */}
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ fontSize: "12px" }}
-        >
-          {producto.descripcion}
-        </Typography>
-
+        
         {/* Precio con o sin descuento */}
         {tieneDescuentoAplicado ? (
           <>

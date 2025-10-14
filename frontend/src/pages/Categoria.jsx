@@ -4,18 +4,25 @@ import { Box, Typography, Card, CardMedia, CardContent } from "@mui/material";
 
 function Categoria() {
   const [categorias, setCategorias] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const getCategorias = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/api/categorias");
+        const response = await axios.get("http://localhost:3000/api/categorias?page=1&limit=10&activo=all");
         setCategorias(response.data.data);
       } catch (error) {
         console.error("Error fetching categorias:", error);
+      } finally {
+        setLoading(false);
       }
     };
     getCategorias();
-  }, []);
+  }, []); // <-- vacío: solo se ejecuta una vez al montar
+
+  if (loading) {
+    return <Typography>Cargando categorías...</Typography>;
+  }
 
   return (
     <Box
@@ -33,12 +40,15 @@ function Categoria() {
           <Card key={categoria.id} sx={{ maxWidth: 250, margin: "auto" }}>
             {categoria.imagenUrl && (
               <CardMedia
-                component="img"
-                height="150"
-                image={categoria.imagenUrl}
-                alt={categoria.nombre}
-                sx={{ objectFit: "cover" }} // ajusta la imagen sin deformar
-              />
+  component="img"
+  height="150"
+  image={categoria.imagenUrl.startsWith('http') 
+          ? categoria.imagenUrl 
+          : `http://localhost:3000/uploads/${categoria.imagenUrl}`} // <-- aquí
+  alt={categoria.nombre}
+  sx={{ objectFit: "cover" }}
+/>
+
             )}
             <CardContent>
               <Typography variant="h6" align="center">
@@ -53,4 +63,3 @@ function Categoria() {
 }
 
 export default Categoria;
-

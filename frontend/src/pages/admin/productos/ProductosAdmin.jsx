@@ -32,21 +32,13 @@ import {
 import axios from "axios";
 
 const ProductosAdmin = () => {
-  // Estado para almacenar la lista de productos
   const [productos, setProductos] = useState([]);
-
-  // Estado para almacenar la lista de categorías
   const [categorias, setCategorias] = useState([]);
-
-  // Estado para controlar la página actual
   const [page, setPage] = useState(1);
-
   const rowsPerPage = 10;
-
   const [totalItems, setTotalItems] = useState(0);
 
   const [openDialog, setOpenDialog] = useState(false);
-
   const [editingProduct, setEditingProduct] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -57,14 +49,12 @@ const ProductosAdmin = () => {
     oferta: false,
     descuento: 0,
     idCategoria: "",
-    idAdministrador: 1, // Valor fijo por ahora
+    idAdministrador: 1,
   });
 
-  // Estado para manejar el archivo de imagen
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-
-  // useEffect que se ejecuta cuando cambia la página
+  // Estados para múltiples imágenes
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
 
   useEffect(() => {
     fetchProductos();
@@ -76,7 +66,6 @@ const ProductosAdmin = () => {
       const response = await axios.get(
         `http://localhost:3000/api/productos?page=${page}&limit=${rowsPerPage}`
       );
-
       setProductos(response.data.data);
       setTotalItems(response.data.pagination.totalItems);
     } catch (error) {
@@ -100,6 +89,7 @@ const ProductosAdmin = () => {
   const handleOpenDialog = (product = null) => {
     if (product) {
       setEditingProduct(product);
+
       setFormData({
         nombre: product.nombre,
         precio: product.precio,
@@ -110,10 +100,43 @@ const ProductosAdmin = () => {
         idCategoria: product.idCategoria,
         idAdministrador: product.idAdministrador,
       });
-      // Mostrar imagen actual si existe
-      if (product.imagen) {
-        setImagePreview(`http://localhost:3000/uploads/${product.imagen}`);
+
+      // Debug: ver qué tipo de dato es imagenes
+      console.log("product.imagenes:", product.imagenes);
+      console.log("typeof product.imagenes:", typeof product.imagenes);
+      console.log(
+        "Array.isArray(product.imagenes):",
+        Array.isArray(product.imagenes)
+      );
+
+      // Normalizar imagenes - puede venir como string o array
+      let imagenesArray = [];
+      if (product.imagenes) {
+        if (typeof product.imagenes === "string") {
+          try {
+            imagenesArray = JSON.parse(product.imagenes);
+          } catch (e) {
+            console.error("Error parsing imagenes:", e);
+            imagenesArray = [];
+          }
+        } else if (Array.isArray(product.imagenes)) {
+          imagenesArray = product.imagenes;
+        }
       }
+
+      if (imagenesArray && imagenesArray.length > 0){
+        setImagePreviews(
+          imagenesArray.map((img) => {
+          // si ya es URL completa, usarla; si solo es nombre de archivo, construir URL
+          return img.startsWith('http') ? img : `http://localhost:3000/uploads/${img}`;
+        })
+      );
+      } else {
+        setImagePreviews([]);
+      }
+
+      // No tocar imageFiles al abrir para edición
+      setImageFiles([]);
     } else {
       setEditingProduct(null);
       setFormData({
@@ -126,8 +149,8 @@ const ProductosAdmin = () => {
         idCategoria: "",
         idAdministrador: 1,
       });
-      setImageFile(null);
-      setImagePreview(null);
+      setImageFiles([]);
+      setImagePreviews([]);
     }
     setOpenDialog(true);
   };
@@ -135,8 +158,8 @@ const ProductosAdmin = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingProduct(null);
-    setImageFile(null);
-    setImagePreview(null);
+    setImageFiles([]);
+    setImagePreviews([]);
   };
 
   const handleInputChange = (e) => {
@@ -147,33 +170,26 @@ const ProductosAdmin = () => {
     }));
   };
 
-  // Manejar cambio de archivo de imagen
+  // Manejar múltiples imágenes
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      // Crear preview de la imagen
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
+    const files = Array.from(e.target.files);
+    setImageFiles(files);
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setImagePreviews(previews);
   };
 
   const handleSubmit = async () => {
     try {
-      // Crear FormData para enviar archivo
       const submitData = new FormData();
-      
-      // Agregar todos los campos del formulario
-      Object.keys(formData).forEach(key => {
+
+      Object.keys(formData).forEach((key) => {
         submitData.append(key, formData[key]);
       });
-      
-      // Agregar imagen si se seleccionó una
-      if (imageFile) {
-        submitData.append('imagen', imageFile);
+
+      if (imageFiles.length > 0) {
+        imageFiles.forEach((file) => {
+          submitData.append("imagenes", file); // Backend debe aceptar array
+        });
       }
 
       if (editingProduct) {
@@ -182,14 +198,14 @@ const ProductosAdmin = () => {
           submitData,
           {
             headers: {
-              'Content-Type': 'multipart/form-data',
+              "Content-Type": "multipart/form-data",
             },
           }
         );
       } else {
         await axios.post("http://localhost:3000/api/productos", submitData, {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
         });
       }
@@ -201,10 +217,6 @@ const ProductosAdmin = () => {
     }
   };
 
-  /**
-   * Función para eliminar un producto
-  
-   */
   const handleDelete = async (id) => {
     if (
       window.confirm("¿Estás seguro de que quieres eliminar este producto?")
@@ -222,7 +234,7 @@ const ProductosAdmin = () => {
 
   return (
     <Box>
-      {/* Encabezado de la página */}
+      {/* Encabezado */}
       <Box
         sx={{
           display: "flex",
@@ -231,10 +243,9 @@ const ProductosAdmin = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h4" component="h1" fontWeight="bold">
+        <Typography variant="h4" fontWeight="bold">
           Productos
         </Typography>
-        {/* Botón para agregar nuevo producto */}
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -244,10 +255,9 @@ const ProductosAdmin = () => {
         </Button>
       </Box>
 
-      {/* Tabla de productos */}
+      {/* Tabla */}
       <TableContainer component={Paper}>
         <Table>
-          {/* Encabezados de la tabla */}
           <TableHead>
             <TableRow>
               <TableCell>Nombre</TableCell>
@@ -257,27 +267,17 @@ const ProductosAdmin = () => {
               <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
-
-          {/* Cuerpo de la tabla */}
           <TableBody>
             {productos.map((producto) => (
               <TableRow key={producto.id}>
+                <TableCell>{producto.nombre}</TableCell>
+                <TableCell align="right">${producto.precio}</TableCell>
+                <TableCell align="right">{producto.stock}</TableCell>
                 <TableCell>
-                  <Typography variant="subtitle2">{producto.nombre}</Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography variant="body1">${producto.precio}</Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography variant="body1">{producto.stock}</Typography>
-                </TableCell>
-                <TableCell>
-                  {/* Buscar nombre de categoría por ID */}
-                  {categorias.find((cat) => cat.id === producto.idCategoria)
+                  {categorias.find((c) => c.id === producto.idCategoria)
                     ?.nombre || "N/A"}
                 </TableCell>
                 <TableCell>
-                  {/* Botones de acción */}
                   <IconButton
                     size="small"
                     onClick={() => handleOpenDialog(producto)}
@@ -297,7 +297,7 @@ const ProductosAdmin = () => {
         </Table>
       </TableContainer>
 
-      {/* Paginación simplificada */}
+      {/* Paginación */}
       <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
         <Pagination
           count={totalPages}
@@ -309,7 +309,7 @@ const ProductosAdmin = () => {
         />
       </Box>
 
-      {/* Modal para formulario de producto */}
+      {/* Modal */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
@@ -319,10 +319,8 @@ const ProductosAdmin = () => {
         <DialogTitle>
           {editingProduct ? "Editar Producto" : "Nuevo Producto"}
         </DialogTitle>
-
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-            {/* Campo nombre */}
             <TextField
               name="nombre"
               label="Nombre"
@@ -331,8 +329,6 @@ const ProductosAdmin = () => {
               fullWidth
               required
             />
-
-            {/* Campo precio */}
             <TextField
               name="precio"
               label="Precio"
@@ -342,8 +338,6 @@ const ProductosAdmin = () => {
               fullWidth
               required
             />
-
-            {/* Campo stock */}
             <TextField
               name="stock"
               label="Stock"
@@ -353,8 +347,6 @@ const ProductosAdmin = () => {
               fullWidth
               required
             />
-
-            {/* Campo descripción */}
             <TextField
               name="descripcion"
               label="Descripción"
@@ -365,41 +357,43 @@ const ProductosAdmin = () => {
               rows={2}
             />
 
-            {/* Campo imagen */}
+            {/* Campo imágenes */}
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                Imagen del Producto
+                Imágenes del Producto
               </Typography>
               <input
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageChange}
-                style={{ marginBottom: '16px' }}
+                style={{ marginBottom: "16px" }}
               />
-              {imagePreview && (
-                <Box sx={{ mt: 2 }}>
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    style={{
-                      maxWidth: '200px',
-                      maxHeight: '200px',
-                      objectFit: 'cover',
-                      borderRadius: '8px',
-                    }}
-                  />
+              {imagePreviews.length > 0 && (
+                <Box sx={{ mt: 2, display: "flex", flexWrap: "wrap", gap: 2 }}>
+                  {imagePreviews.map((preview, index) => (
+                    <img
+                      key={index}
+                      src={preview}
+                      alt={`Preview ${index}`}
+                      style={{
+                        maxWidth: "120px",
+                        maxHeight: "120px",
+                        objectFit: "cover",
+                        borderRadius: "8px",
+                      }}
+                    />
+                  ))}
                 </Box>
               )}
             </Box>
 
-            {/* Selector de categoría */}
             <FormControl fullWidth>
               <InputLabel>Categoría</InputLabel>
               <Select
                 name="idCategoria"
                 value={formData.idCategoria}
                 onChange={handleInputChange}
-                label="Categoría"
               >
                 {categorias.map((categoria) => (
                   <MenuItem key={categoria.id} value={categoria.id}>
@@ -409,7 +403,6 @@ const ProductosAdmin = () => {
               </Select>
             </FormControl>
 
-            {/* Switch para oferta */}
             <FormControlLabel
               control={
                 <Switch
@@ -421,7 +414,6 @@ const ProductosAdmin = () => {
               label="En Oferta"
             />
 
-            {/* Campo descuento (solo si está en oferta) */}
             {formData.oferta && (
               <TextField
                 name="descuento"
@@ -434,8 +426,6 @@ const ProductosAdmin = () => {
             )}
           </Box>
         </DialogContent>
-
-        {/* Botones del modal */}
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancelar</Button>
           <Button onClick={handleSubmit} variant="contained">
