@@ -10,6 +10,7 @@ import ProductoDetalle from "./pages/ProductoDetalle";
 import Nosotros from "./pages/Nosotros";
 import Contacto from "./pages/Contacto";
 import AuthCallback from "./pages/AuthCallback";
+import Checkout from "./pages/Checkout";
 import AdminLayout from "./layouts/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import ProductosAdmin from "./pages/admin/productos/ProductosAdmin";
@@ -33,6 +34,7 @@ const App = () => {
         <Route path="/nosotros" element={<Nosotros />} />
         <Route path="/contacto" element={<Contacto />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/checkout" element={<Checkout />} />
         
         
         {/* Rutas de administración */}

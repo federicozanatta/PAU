@@ -14,17 +14,32 @@ import {
   Divider
 } from '@mui/material';
 import { Add as AddIcon, Remove as RemoveIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/Cart.context';
+import { useAuth } from '../contexts/Auth.context';
 
-const CartModal = ({ open, onClose }) => {
-  const { 
-    cartItems, 
-    addToCart, 
-    decrementQuantity, 
-    removeFromCart, 
-    getTotalPrice, 
-    clearCart 
+const CartModal = ({ open, onClose, onOpenLogin }) => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const {
+    cartItems,
+    addToCart,
+    decrementQuantity,
+    removeFromCart,
+    getTotalPrice,
+    clearCart
   } = useCart();
+
+  const handleCheckout = () => {
+    onClose();
+    if (!isAuthenticated) {
+      if (onOpenLogin) {
+        onOpenLogin();
+      }
+      return;
+    }
+    navigate('/checkout');
+  };
 
   if (cartItems.length === 0) {
     return (
@@ -150,7 +165,7 @@ const CartModal = ({ open, onClose }) => {
       
       <DialogActions>
         <Button onClick={onClose}>Seguir Comprando</Button>
-        <Button variant="contained" color="primary">
+        <Button variant="contained" color="primary" onClick={handleCheckout}>
           Proceder al Pago
         </Button>
       </DialogActions>
