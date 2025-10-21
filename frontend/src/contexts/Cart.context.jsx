@@ -115,6 +115,30 @@ export const CartProvider = ({ children }) => {
     return item ? item.cantidad : 0;
   };
 
+  // Establecer cantidad específica de un producto
+  const setProductQuantity = (producto, cantidad) => {
+    if (cantidad <= 0) {
+      removeFromCart(producto.id);
+      return;
+    }
+
+    setCartItems(prevItems => {
+      const existingItem = prevItems.find(item => item.id === producto.id);
+
+      if (existingItem) {
+        // Si ya existe, actualizar cantidad
+        return prevItems.map(item =>
+          item.id === producto.id
+            ? { ...item, cantidad: cantidad }
+            : item
+        );
+      } else {
+        // Si no existe, agregarlo con la cantidad especificada
+        return [...prevItems, { ...producto, cantidad: cantidad }];
+      }
+    });
+  };
+
   const clearCart = () => {
     setCartItems([]);
   };
@@ -138,6 +162,7 @@ export const CartProvider = ({ children }) => {
     getTotalPrice,
     isInCart,
     getItemQuantity,
+    setProductQuantity,
     clearCart
   };
 

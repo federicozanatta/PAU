@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+        import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import {
@@ -37,10 +37,11 @@ const ProductoDetalle = () => {
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [variantes, setVariantes] = useState([]);
   const { cupon } = useContext(CuponContext);
-  const { addToCart, removeFromCart, isInCart, getItemQuantity } = useCart();
+  const { addToCart, removeFromCart, isInCart, getItemQuantity, setProductQuantity } = useCart();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [images, setImages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [selectedQuantity, setSelectedQuantity] = useState(0);
 
   useEffect(() => {
     axios
@@ -153,14 +154,18 @@ const ProductoDetalle = () => {
   const tieneDescuentoAplicado = mejorDescuento > 0;
 
   const productInCart = isInCart(producto.id);
-  const quantity = getItemQuantity(producto.id);
+  const cartQuantity = getItemQuantity(producto.id);
 
   const handleAddToCart = () => {
-    addToCart(producto);
+    if (selectedQuantity > 0) {
+      setProductQuantity(producto, selectedQuantity);
+      setSelectedQuantity(0);
+    }
   };
 
   const handleRemoveFromCart = () => {
     removeFromCart(producto.id);
+    setSelectedQuantity(0);
   };
 
   const nextImage = () => {
@@ -172,20 +177,10 @@ const ProductoDetalle = () => {
   };
 
   const handleQuantityChange = (action) => {
-    if (action === 'increment') {
-      addToCart(producto);
-    } else if (action === 'decrement' && quantity > 0) {
-      if (quantity === 1) {
-        removeFromCart(producto.id);
-      } else {
-        // Aquí necesitarías una función decrementQuantity en el contexto
-        // Por ahora usamos removeFromCart que elimina completamente
-        removeFromCart(producto.id);
-        // Agregar la cantidad - 1
-        for (let i = 0; i < quantity - 1; i++) {
-          addToCart(producto);
-        }
-      }
+    if (action === 'increment' && selectedQuantity < (producto?.stock || 0)) {
+      setSelectedQuantity(prev => prev + 1);
+    } else if (action === 'decrement' && selectedQuantity > 0) {
+      setSelectedQuantity(prev => prev - 1);
     }
   };
 
@@ -328,9 +323,9 @@ const ProductoDetalle = () => {
       justifyContent: 'center'
     }}
   >
-    <IconButton 
+    <IconButton
       onClick={() => handleQuantityChange('decrement')}
-      disabled={quantity === 0}
+      disabled={selectedQuantity === 0}
       color="primary"
       sx={{ 
         border: '1px solid',
@@ -345,21 +340,21 @@ const ProductoDetalle = () => {
       <RemoveIcon />
     </IconButton>
     
-    <Typography 
-      variant="h6" 
-      sx={{ 
-        minWidth: 40, 
-        textAlign: 'center', 
-        fontWeight: 'bold' 
+    <Typography
+      variant="h6"
+      sx={{
+        minWidth: 40,
+        textAlign: 'center',
+        fontWeight: 'bold'
       }}
     >
-      {quantity}
+      {selectedQuantity}
     </Typography>
     
-    <IconButton 
+    <IconButton
       onClick={() => handleQuantityChange('increment')}
       color="primary"
-      disabled={quantity >= (producto?.stock || 0)}
+      disabled={selectedQuantity >= (producto?.stock || 0)}
       sx={{ 
         border: '1px solid',
         borderColor: 'primary.main',
@@ -374,29 +369,42 @@ const ProductoDetalle = () => {
     </IconButton>
   </Box>
 
-  {quantity > 0 && (
-    <Typography 
-      variant="body1" 
-      color="success.main" 
-      fontWeight="bold" 
+  {selectedQuantity > 0 && (
+    <Typography
+      variant="body1"
+      color="success.main"
+      fontWeight="bold"
       textAlign="center"
     >
-      Subtotal: ${(precioFinal * quantity).toFixed(2)}
+      Subtotal: ${(precioFinal * selectedQuantity).toFixed(2)}
+    </Typography>
+  )}
+
+  {cartQuantity > 0 && (
+    <Typography
+      variant="body2"
+      color="primary"
+      fontWeight="medium"
+      textAlign="center"
+      sx={{ mt: 1 }}
+    >
+      En carrito: {cartQuantity} unidad{cartQuantity !== 1 ? 'es' : ''}
     </Typography>
   )}
 </Paper>
 
 
               {/* Botón principal de carrito */}
-              <Button 
-                variant="contained" 
-                color="primary" 
+              <Button
+                variant="contained"
+                color="primary"
                 onClick={handleAddToCart}
                 size="large"
                 fullWidth
+                disabled={selectedQuantity === 0}
                 sx={{ mb: 2, py: 1.5 }}
               >
-                {productInCart ? 'Agregar más al carrito' : 'Agregar al carrito'}
+                Añadir al carrito
               </Button>
 
               {productInCart && (
