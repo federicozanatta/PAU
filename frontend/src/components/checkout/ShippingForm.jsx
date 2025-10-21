@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Stepper, Step, StepLabel, Box, Paper } from '@mui/material';
-import { useAuth } from '../contexts/Auth.context';
-import { useCart } from '../contexts/Cart.context';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import ShippingForm from '../components/checkout/ShippingForm';
-import PaymentScreen from '../components/checkout/PaymentScreen';
-import OrderConfirmation from '../components/checkout/OrderConfirmation';
+import { useAuth } from '../../contexts/Auth.context';
+import { useCart } from '../../contexts/Cart.context';
+import Header from '../Header';
+import Footer from '../Footer';
+
+import PaymentScreen from '../../components/checkout/PaymentScreen';
+import OrderConfirmation from '../../components/checkout/OrderConfirmation';
 
 const steps = ['Dirección de Envío', 'Pago', 'Confirmación'];
 

@@ -16,9 +16,8 @@ import { useCart } from "../contexts/Cart.context";
 import LoginModal from "./LoginModal";
 import CartModal from "./CartModal";
 import { Badge } from "@mui/material";
+import logo1 from "../assets/logo1.jpg";
 import { Link } from "react-router-dom";
-
-const logo1 = "https://images.pexels.com/photos/7679720/pexels-photo-7679720.jpeg";
 
 const Header = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -105,13 +104,9 @@ const Header = () => {
         onClose={() => setLoginModalOpen(false)} 
       />
       
-      <CartModal
-        open={cartModalOpen}
-        onClose={() => setCartModalOpen(false)}
-        onOpenLogin={() => {
-          setCartModalOpen(false);
-          setLoginModalOpen(true);
-        }}
+      <CartModal 
+        open={cartModalOpen} 
+        onClose={() => setCartModalOpen(false)} 
       />
     </>
   );
