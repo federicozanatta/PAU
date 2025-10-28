@@ -42,8 +42,7 @@ function Categoria() {
   }, []);
 
   const handleCategoriaClick = (categoriaId) => {
-    // Navega a la página de productos filtrados por categoría
-    navigate(`/productos?categoria=${categoriaId}`);
+    navigate(`/categorias/${categoriaId}`);
   };
 
   if (loading) {
