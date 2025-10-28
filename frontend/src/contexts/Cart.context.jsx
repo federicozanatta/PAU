@@ -1,18 +1,20 @@
-import { createContext, useState, useContext, useEffect } from 'react';
-import { useAuth } from './Auth.context';
+// src/contexts/Cart.context.js
+import { createContext, useState, useContext, useEffect, useMemo } from "react";
+import { useAuth } from "./Auth.context";
 
 const CartContext = createContext();
 
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart debe ser usado dentro de CartProvider');
+    throw new Error("useCart debe ser usado dentro de un CartProvider");
   }
   return context;
 };
 
+// 🔹 Helpers para manejar el storage por usuario
 const getCartStorageKey = (userEmail) => {
-  return userEmail ? `cart_${userEmail}` : 'cart_guest';
+  return userEmail ? `cart_${userEmail}` : "cart_guest";
 };
 
 const loadCartFromStorage = (userEmail) => {
@@ -21,7 +23,7 @@ const loadCartFromStorage = (userEmail) => {
     const storedCart = localStorage.getItem(key);
     return storedCart ? JSON.parse(storedCart) : [];
   } catch (error) {
-    console.error('Error al cargar carrito desde localStorage:', error);
+    console.error("Error al cargar carrito desde localStorage:", error);
     return [];
   }
 };
@@ -31,7 +33,7 @@ const saveCartToStorage = (userEmail, cartItems) => {
     const key = getCartStorageKey(userEmail);
     localStorage.setItem(key, JSON.stringify(cartItems));
   } catch (error) {
-    console.error('Error al guardar carrito en localStorage:', error);
+    console.error("Error al guardar carrito en localStorage:", error);
   }
 };
 
@@ -41,134 +43,110 @@ export const CartProvider = ({ children }) => {
 
   const [cartItems, setCartItems] = useState(() => loadCartFromStorage(userEmail));
 
-  // Agregar producto al carrito
-  const addToCart = (producto) => {
-    setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === producto.id);
-      
-      if (existingItem) {
-        // Si ya existe, incrementar cantidad
-        return prevItems.map(item =>
-          item.id === producto.id
-            ? { ...item, cantidad: item.cantidad + 1 }
-            : item
-        );
-      } else {
-        // Si no existe, agregarlo con cantidad 1
-        return [...prevItems, { ...producto, cantidad: 1 }];
-      }
-    });
-  };
-
-  // Eliminar producto del carrito
-  const removeFromCart = (productoId) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== productoId));
-  };
-
-  // Decrementar cantidad
-  const decrementQuantity = (productoId) => {
-    setCartItems(prevItems => {
-      return prevItems.map(item => {
-        if (item.id === productoId) {
-          if (item.cantidad > 1) {
-            return { ...item, cantidad: item.cantidad - 1 };
-          } else {
-            // Si la cantidad es 1, eliminar el producto
-            return null;
-          }
-        }
-        return item;
-      }).filter(Boolean); // Filtrar elementos null
-    });
-  };
-
-  // Decrementar una unidad sin eliminar completamente
-  const decrementOne = (productoId) => {
-    setCartItems(prevItems => {
-      return prevItems.map(item => {
-        if (item.id === productoId && item.cantidad > 1) {
-          return { ...item, cantidad: item.cantidad - 1 };
-        }
-        return item;
-      });
-    });
-  };
-
-  // Obtener cantidad total de productos
-  const getTotalItems = () => {
-    return cartItems.reduce((total, item) => total + item.cantidad, 0);
-  };
-
-  // Obtener precio total
-  const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + (item.precio * item.cantidad), 0);
-  };
-
-  // Verificar si un producto está en el carrito
-  const isInCart = (productoId) => {
-    return cartItems.some(item => item.id === productoId);
-  };
-
-  // Obtener cantidad de un producto específico
-  const getItemQuantity = (productoId) => {
-    const item = cartItems.find(item => item.id === productoId);
-    return item ? item.cantidad : 0;
-  };
-
-  // Establecer cantidad específica de un producto
-  const setProductQuantity = (producto, cantidad) => {
-    if (cantidad <= 0) {
-      removeFromCart(producto.id);
-      return;
-    }
-
-    setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === producto.id);
-
-      if (existingItem) {
-        // Si ya existe, actualizar cantidad
-        return prevItems.map(item =>
-          item.id === producto.id
-            ? { ...item, cantidad: cantidad }
-            : item
-        );
-      } else {
-        // Si no existe, agregarlo con la cantidad especificada
-        return [...prevItems, { ...producto, cantidad: cantidad }];
-      }
-    });
-  };
-
-  const clearCart = () => {
-    setCartItems([]);
-  };
-
-  useEffect(() => {
-    saveCartToStorage(userEmail, cartItems);
-  }, [cartItems, userEmail]);
-
+  // 🔹 Cargar carrito cuando cambia el usuario
   useEffect(() => {
     const storedCart = loadCartFromStorage(userEmail);
     setCartItems(storedCart);
   }, [userEmail]);
 
-  const value = {
-    cartItems,
-    addToCart,
-    removeFromCart,
-    decrementQuantity,
-    decrementOne,
-    getTotalItems,
-    getTotalPrice,
-    isInCart,
-    getItemQuantity,
-    setProductQuantity,
-    clearCart
+  // 🔹 Guardar carrito cada vez que cambia
+  useEffect(() => {
+    saveCartToStorage(userEmail, cartItems);
+  }, [cartItems]);
+
+  // 🔹 Agregar producto
+  const addToCart = (producto) => {
+    setCartItems((prevItems) => {
+      const existingItem = prevItems.find((item) => item.id === producto.id);
+      if (existingItem) {
+        return prevItems.map((item) =>
+          item.id === producto.id
+            ? { ...item, cantidad: item.cantidad + 1 }
+            : item
+        );
+      } else {
+        return [...prevItems, { ...producto, cantidad: 1 }];
+      }
+    });
   };
 
-  return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
+  // 🔹 Eliminar producto
+  const removeFromCart = (productoId) => {
+    setCartItems((prevItems) => prevItems.filter((item) => item.id !== productoId));
+  };
+
+  // 🔹 Decrementar cantidad (con opción de eliminar al llegar a 0)
+  const decrementQuantity = (productoId, allowDelete = true) => {
+    setCartItems((prevItems) => {
+      return prevItems
+        .map((item) => {
+          if (item.id === productoId) {
+            const nuevaCantidad = item.cantidad - 1;
+            if (nuevaCantidad <= 0 && allowDelete) return null;
+            return { ...item, cantidad: Math.max(nuevaCantidad, 0) };
+          }
+          return item;
+        })
+        .filter(Boolean);
+    });
+  };
+
+  // 🔹 Cantidad total
+  const getTotalItems = () => {
+    return cartItems.reduce((total, item) => total + item.cantidad, 0);
+  };
+
+  // 🔹 Precio total
+  const getTotalPrice = () => {
+    return cartItems.reduce(
+      (total, item) => total + ((item.precio || 0) * item.cantidad),
+      0
+    );
+  };
+
+  // 🔹 Verificar si está en el carrito
+  const isInCart = (productoId) => {
+    return cartItems.some((item) => item.id === productoId);
+  };
+
+  // 🔹 Obtener cantidad de un producto
+  const getItemQuantity = (productoId) => {
+    const item = cartItems.find((item) => item.id === productoId);
+    return item ? item.cantidad : 0;
+  };
+
+  // 🔹 Establecer cantidad específica
+  const setProductQuantity = (producto, cantidad) => {
+    setCartItems((prevItems) => {
+      const updatedItems = prevItems.filter((item) => item.id !== producto.id);
+      if (cantidad > 0) {
+        updatedItems.push({ ...producto, cantidad });
+      }
+      return updatedItems;
+    });
+  };
+
+  // 🔹 Vaciar carrito
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
+  // 🔹 Memorizar valores para evitar renders innecesarios
+  const value = useMemo(
+    () => ({
+      cartItems,
+      addToCart,
+      removeFromCart,
+      decrementQuantity,
+      getTotalItems,
+      getTotalPrice,
+      isInCart,
+      getItemQuantity,
+      setProductQuantity,
+      clearCart,
+    }),
+    [cartItems]
   );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };

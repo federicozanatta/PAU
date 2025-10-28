@@ -18,6 +18,7 @@ import CategoriasAdmin from "./pages/admin/categorias/CategoriasAdmin";
 import AdministradoresAdmin from "./pages/admin/administradores/AdministradoresAdmin";
 import CuponesAdmin from "./pages/admin/cupones/CuponesAdmin";
 import { ChatbotWidget } from "./components/Chatbot";
+import Docentes from "./pages/Docentes";
 
 const App = () => {
   return (
@@ -33,6 +34,7 @@ const App = () => {
         <Route path="/productos/:id" element={<ProductoDetalle />} />
         <Route path="/nosotros" element={<Nosotros />} />
         <Route path="/contacto" element={<Contacto />} />
+        <Route path="/docentes" element={<Docentes />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/checkout" element={<Checkout />} />
         

@@ -1,4 +1,4 @@
-        import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import {
@@ -16,13 +16,17 @@ import {
   ListItem,
   ListItemText,
   Paper,
-  Chip
+  Chip,
+  Stack,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Remove as RemoveIcon,
   ArrowBackIos as ArrowBackIcon,
-  ArrowForwardIos as ArrowForwardIcon
+  ArrowForwardIos as ArrowForwardIcon,
+  ShoppingCart as CartIcon,
+  LocalShipping as ShippingIcon,
+  Inventory as StockIcon,
 } from "@mui/icons-material";
 import { CuponContext } from "../contexts/Cupon.context";
 import { useCart } from "../contexts/Cart.context";
@@ -36,97 +40,95 @@ const ProductoDetalle = () => {
   const [mensajes, setMensajes] = useState([]);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [variantes, setVariantes] = useState([]);
-  const { cupon } = useContext(CuponContext);
-  const { addToCart, removeFromCart, isInCart, getItemQuantity, setProductQuantity } = useCart();
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [images, setImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedQuantity, setSelectedQuantity] = useState(0);
 
+  const { cupon } = useContext(CuponContext);
+  const { removeFromCart, isInCart, getItemQuantity, setProductQuantity } =
+    useCart();
+
+  const cartQuantity = producto ? getItemQuantity(producto.id) : 0;
+  const productInCart = producto ? isInCart(producto.id) : false;
+
+  // 🔹 Cargar producto
   useEffect(() => {
+    if (!id) return;
     axios
       .get(`http://localhost:3000/api/productos/${id}`)
       .then((res) => setProducto(res.data.data))
       .catch((err) => console.error("Error producto", err));
   }, [id]);
 
+  // 🔹 Cargar imágenes
   useEffect(() => {
-  if (!producto) return;
+    if (!producto) return;
 
-  let imagenes = [];
-
-  try {
-    // ✅ Si 'imagenes' es un string tipo '["img1.jpg"]', lo parseamos
-    if (typeof producto.imagenes === "string") {
-      imagenes = JSON.parse(producto.imagenes);
-    }
-    // ✅ Si ya es array, lo usamos directamente
-    else if (Array.isArray(producto.imagenes)) {
-      imagenes = producto.imagenes;
-    }
-    // ✅ Compatibilidad con productos antiguos que usaban 'imagen' única
-    else if (producto.imagen) {
+    let imagenes = [];
+    if (producto.imagenes) {
+      try {
+        imagenes =
+          typeof producto.imagenes === "string"
+            ? JSON.parse(producto.imagenes)
+            : producto.imagenes;
+      } catch (error) {
+        console.warn("Error parseando imágenes:", error);
+      }
+    } else if (producto.imagen) {
       imagenes = [producto.imagen];
     }
-  } catch (error) {
-    console.warn("Error parseando imágenes:", error);
-  }
 
-  // ✅ Si no hay imágenes, usar un placeholder seguro (URL válida)
-  if (imagenes.length > 0) {
-    setImages(imagenes.map((img) =>
-      img.startsWith("http")
-        ? img
-        : `http://localhost:3000/uploads/${img}`
-    ));
-  } else {
-    setImages(["https://placehold.co/500x400?text=Sin+Imagen"]);
-  }
-}, [producto]);
+    setImages(
+      imagenes.length
+        ? imagenes.map((img) =>
+            img.startsWith("http")
+              ? img
+              : `http://localhost:3000/uploads/${img}`
+          )
+        : ["https://placehold.co/500x400?text=Sin+Imagen"]
+    );
+    setCurrentImageIndex(0);
+  }, [producto]);
 
-
+  // 🔹 Cargar mensajes
   useEffect(() => {
+    if (!id) return;
     axios
       .get(`http://localhost:3000/api/productos/${id}/mensajes`)
-      .then((res) => {
-        console.log("Mensajes response:", res.data);
-        setMensajes(res.data.data || []);
-      })
+      .then((res) => setMensajes(res.data.data || []))
       .catch((err) => {
         console.error("Error mensajes", err);
         setMensajes([]);
       });
   }, [id]);
 
+  // 🔹 Cargar variantes
   useEffect(() => {
+    if (!id) return;
     axios
       .get(`http://localhost:3000/api/variantes/producto/${id}`)
-      .then((res) => {
-        console.log("Variantes response:", res.data);
-        setVariantes(res.data.data || []);
-      })
+      .then((res) => setVariantes(res.data.data || []))
       .catch((err) => {
-        console.error("Error en traer variantes", err);
+        console.error("Error variantes", err);
         setVariantes([]);
       });
   }, [id]);
 
+  // 🔹 Socket de comentarios
   useEffect(() => {
+    if (!id) return;
     const socket = socketService.connect();
+    if (!socket) return;
 
-    if (socket) {
-      setIsConnected(true);
-      socketService.joinProduct(id);
+    setIsConnected(true);
+    socketService.joinProduct(id);
 
-      socketService.onCommentAdded(({ data }) => {
-        console.log("💬 Nuevo comentario recibido:", data);
-        setMensajes((prev) => [...prev, data]);
-      });
+    socketService.onCommentAdded(({ data }) => {
+      setMensajes((prev) => [...prev, data]);
+    });
 
-      socketService.onCommentError((error) => {
-        console.error("Error al recibir comentario:", error);
-      });
-    }
+    socketService.onCommentError(console.error);
 
     return () => {
       socketService.leaveProduct(id);
@@ -137,382 +139,629 @@ const ProductoDetalle = () => {
     };
   }, [id]);
 
+  // 🔹 Enviar mensaje
   const enviarMensaje = () => {
     if (!nuevoMensaje.trim()) return;
-
     socketService.sendComment(id, nuevoMensaje);
     setNuevoMensaje("");
   };
 
-  if (!producto) return <p>Cargando producto...</p>;
+  // 🔹 Manejo de cantidad seleccionada
+  const handleQuantityChange = (action) => {
+    if (action === "increment") {
+      setSelectedQuantity((prev) => Math.min(prev + 1, producto?.stock || 0));
+    } else if (action === "decrement") {
+      setSelectedQuantity((prev) => Math.max(prev - 1, 0));
+    }
+  };
 
-  // 👇 calculamos descuentos igual que en ProductCard
-  const descuentoProducto = producto.descuento || 0;
-  const descuentoCupon = cupon?.porcentajeDescuento || 0;
-  const mejorDescuento = Math.max(descuentoProducto, descuentoCupon);
-  const precioFinal = producto.precio - (producto.precio * mejorDescuento) / 100;
-  const tieneDescuentoAplicado = mejorDescuento > 0;
-
-  const productInCart = isInCart(producto.id);
-  const cartQuantity = getItemQuantity(producto.id);
-
+  // 🔹 Agregar al carrito
   const handleAddToCart = () => {
     if (selectedQuantity > 0) {
-      setProductQuantity(producto, selectedQuantity);
+      setProductQuantity(producto, cartQuantity + selectedQuantity);
       setSelectedQuantity(0);
     }
   };
 
+  // 🔹 Quitar del carrito
   const handleRemoveFromCart = () => {
     removeFromCart(producto.id);
     setSelectedQuantity(0);
   };
 
-  const nextImage = () => {
+  // 🔹 Carrusel de imágenes
+  const nextImage = () =>
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const prevImage = () => {
+  const prevImage = () =>
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
 
-  const handleQuantityChange = (action) => {
-    if (action === 'increment' && selectedQuantity < (producto?.stock || 0)) {
-      setSelectedQuantity(prev => prev + 1);
-    } else if (action === 'decrement' && selectedQuantity > 0) {
-      setSelectedQuantity(prev => prev - 1);
-    }
-  };
+  if (!producto) return <p>Cargando producto...</p>;
+
+  // 🔹 Cálculo de descuentos
+  const descuentoProducto = producto.descuento || 0;
+  const descuentoCupon = cupon?.porcentajeDescuento || 0;
+  const mejorDescuento = Math.max(descuentoProducto, descuentoCupon);
+  const precioFinal =
+    producto.precio - (producto.precio * mejorDescuento) / 100;
+  const tieneDescuentoAplicado = mejorDescuento > 0;
 
   return (
     <>
       <Header />
-      <Container maxWidth="lg" sx={{ py: 4, backgroundColor: "white", minHeight: "100vh" }}>
-        <Grid container spacing={4}>
-          {/* Columna izquierda - Carrusel de imágenes */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ position: 'relative', mb: 2 }}>
-              <CardMedia
-                component="img"
-                height="400"
-                image={images[currentImageIndex]}
-                alt={producto?.nombre}
-                sx={{ objectFit: 'cover' }}
-              />
-              
-              {/* Controles del carrusel */}
-              {images.length > 1 && (
-                <>
-                  <IconButton
+      <Box sx={{ backgroundColor: "#f8f9fa", minHeight: "100vh", py: 4 }}>
+        <Container maxWidth="xl">
+          {/* Imagen del producto */}
+          <Paper elevation={2} sx={{ p: 4, mb: 3, borderRadius: 3 }}>
+            <Box sx={{ maxWidth: 600, mx: "auto" }}>
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  border: "1px solid #e0e0e0",
+                }}
+              >
+                <Box sx={{ position: "relative" }}>
+                  <CardMedia
+                    component="img"
+                    image={images[currentImageIndex]}
+                    alt={producto.nombre}
                     sx={{
-                      position: 'absolute',
-                      left: 8,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      backgroundColor: 'rgba(255,255,255,0.8)',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
+                      objectFit: "contain",
+                      width: "100%",
+                      height: "auto",
+                      maxHeight: "500px",
+                      backgroundColor: "#f5f5f5",
                     }}
-                    onClick={prevImage}
-                  >
-                    <ArrowBackIcon />
-                  </IconButton>
-                  <IconButton
-                    sx={{
-                      position: 'absolute',
-                      right: 8,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      backgroundColor: 'rgba(255,255,255,0.8)',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
-                    }}
-                    onClick={nextImage}
-                  >
-                    <ArrowForwardIcon />
-                  </IconButton>
-                </>
-              )}
-              
-              {/* Indicadores */}
-              {images.length > 1 && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: 16,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    gap: 1
-                  }}
-                >
-                  {images.map((_, index) => (
-                    <Box
-                      key={index}
+                  />
+
+                  {/* Descuento badge */}
+                  {mejorDescuento > 0 && (
+                    <Chip
+                      label={`-${mejorDescuento}%`}
+                      color="error"
                       sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: index === currentImageIndex ? 'white' : 'rgba(255,255,255,0.5)',
-                        cursor: 'pointer'
+                        position: "absolute",
+                        top: 16,
+                        right: 16,
+                        fontWeight: "bold",
+                        fontSize: "1rem",
+                        height: 36,
                       }}
-                      onClick={() => setCurrentImageIndex(index)}
                     />
-                  ))}
+                  )}
+
+                  {images.length > 1 && (
+                    <>
+                      <IconButton
+                        sx={{
+                          position: "absolute",
+                          left: 8,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          backgroundColor: "rgba(255,255,255,0.95)",
+                          boxShadow: 2,
+                          "&:hover": { backgroundColor: "white" },
+                        }}
+                        onClick={prevImage}
+                      >
+                        <ArrowBackIcon />
+                      </IconButton>
+                      <IconButton
+                        sx={{
+                          position: "absolute",
+                          right: 8,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          backgroundColor: "rgba(255,255,255,0.95)",
+                          boxShadow: 2,
+                          "&:hover": { backgroundColor: "white" },
+                        }}
+                        onClick={nextImage}
+                      >
+                        <ArrowForwardIcon />
+                      </IconButton>
+                    </>
+                  )}
                 </Box>
-              )}
-            </Card>
-          </Grid>
 
-          {/* Columna derecha - Información del producto */}
-          <Grid item xs={12} md={6}>
-            <Box sx={{ pl: { md: 2 } }}>
-              {/* Nombre del producto */}
-              <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-                {producto?.nombre}
-              </Typography>
+                {/* Miniaturas */}
+                {images.length > 1 && (
+                  <Box
+                    sx={{
+                      p: 2,
+                      display: "flex",
+                      gap: 1,
+                      overflowX: "auto",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {images.map((img, index) => (
+                      <Box
+                        key={index}
+                        component="img"
+                        src={img}
+                        alt={`${producto.nombre} ${index + 1}`}
+                        onClick={() => setCurrentImageIndex(index)}
+                        sx={{
+                          width: 70,
+                          height: 70,
+                          objectFit: "cover",
+                          borderRadius: 1,
+                          cursor: "pointer",
+                          border:
+                            index === currentImageIndex
+                              ? "3px solid"
+                              : "1px solid",
+                          borderColor:
+                            index === currentImageIndex
+                              ? "primary.main"
+                              : "#e0e0e0",
+                          opacity: index === currentImageIndex ? 1 : 0.6,
+                          transition: "all 0.2s",
+                          flexShrink: 0,
+                          "&:hover": { opacity: 1 },
+                        }}
+                      />
+                    ))}
+                  </Box>
+                )}
+              </Card>
+            </Box>
+          </Paper>
 
-              {/* Descripción */}
-              <Typography variant="body1" color="text.secondary" paragraph>
-                {producto?.descripcion}
-              </Typography>
+          {/* Información del producto */}
+          <Paper elevation={2} sx={{ p: 4, mb: 3, borderRadius: 3 }}>
+            <Box sx={{ maxWidth: 800, mx: "auto" }}>
+              <Stack spacing={3}>
+                {/* Nombre */}
+                <Typography
+                  variant="h4"
+                  fontWeight="bold"
+                  color="text.primary"
+                  textAlign="center"
+                >
+                  {producto.nombre}
+                </Typography>
 
-              {/* Precio */}
-              <Box sx={{ mb: 3 }}>
-                {tieneDescuentoAplicado ? (
-                  <>
+                {/* Descripción */}
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ lineHeight: 1.8, textAlign: "center" }}
+                >
+                  {producto.descripcion}
+                </Typography>
+
+                <Divider />
+
+                {/* Precio */}
+                <Box sx={{ textAlign: "center" }}>
+                  {tieneDescuentoAplicado ? (
+                    <Stack spacing={1} alignItems="center">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 2,
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Typography
+                          variant="h5"
+                          color="text.secondary"
+                          sx={{ textDecoration: "line-through" }}
+                        >
+                          ${producto.precio.toFixed(2)}
+                        </Typography>
+                        <Chip
+                          label={`${mejorDescuento}% OFF`}
+                          color="success"
+                          size="small"
+                          sx={{ fontWeight: "bold" }}
+                        />
+                      </Box>
+                      <Typography
+                        variant="h3"
+                        color="error.main"
+                        fontWeight="bold"
+                      >
+                        ${precioFinal.toFixed(2)}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="success.main"
+                        fontWeight="medium"
+                      >
+                        ¡Ahorrás ${(producto.precio - precioFinal).toFixed(2)}!
+                      </Typography>
+                    </Stack>
+                  ) : (
+                    <Typography
+                      variant="h3"
+                      fontWeight="bold"
+                      color="primary.main"
+                    >
+                      ${producto.precio.toFixed(2)}
+                    </Typography>
+                  )}
+                </Box>
+
+                <Divider />
+
+                {/* Stock y envío */}
+                <Stack
+                  direction="row"
+                  spacing={3}
+                  justifyContent="center"
+                  flexWrap="wrap"
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <StockIcon
+                      color={producto.stock > 0 ? "success" : "error"}
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>{producto.stock}</strong> unidades disponibles
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <ShippingIcon color="primary" />
+                    <Typography variant="body2" color="primary">
+                      Envío disponible
+                    </Typography>
+                  </Box>
+                </Stack>
+
+                <Divider />
+
+                {/* Selector de cantidad */}
+                <Box>
+                  <Typography
+                    variant="h6"
+                    fontWeight="medium"
+                    gutterBottom
+                    textAlign="center"
+                  >
+                    Cantidad
+                  </Typography>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      border: "2px solid #e0e0e0",
+                      backgroundColor: "#fafafa",
+                      maxWidth: 400,
+                      mx: "auto",
+                    }}
+                  >
+                    <Stack spacing={2}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 3,
+                        }}
+                      >
+                        <IconButton
+                          onClick={() => handleQuantityChange("decrement")}
+                          disabled={selectedQuantity === 0}
+                          color="primary"
+                          size="large"
+                          sx={{
+                            border: "2px solid",
+                            borderColor:
+                              selectedQuantity === 0
+                                ? "#e0e0e0"
+                                : "primary.main",
+                            "&:hover": { transform: "scale(1.1)" },
+                          }}
+                        >
+                          <RemoveIcon />
+                        </IconButton>
+
+                        <Typography
+                          variant="h4"
+                          fontWeight="bold"
+                          sx={{ minWidth: 60, textAlign: "center" }}
+                        >
+                          {selectedQuantity}
+                        </Typography>
+
+                        <IconButton
+                          onClick={() => handleQuantityChange("increment")}
+                          disabled={selectedQuantity >= (producto.stock || 0)}
+                          color="primary"
+                          size="large"
+                          sx={{
+                            border: "2px solid",
+                            borderColor:
+                              selectedQuantity >= producto.stock
+                                ? "#e0e0e0"
+                                : "primary.main",
+                            "&:hover": { transform: "scale(1.1)" },
+                          }}
+                        >
+                          <AddIcon />
+                        </IconButton>
+                      </Box>
+
+                      {selectedQuantity > 0 && (
+                        <Box
+                          sx={{
+                            textAlign: "center",
+                            p: 1.5,
+                            backgroundColor: "success.light",
+                            borderRadius: 1,
+                          }}
+                        >
+                          <Typography
+                            variant="h6"
+                            color="success.dark"
+                            fontWeight="bold"
+                          >
+                            Subtotal: $
+                            {(precioFinal * selectedQuantity).toFixed(2)}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Stack>
+                  </Paper>
+                </Box>
+
+                {/* Botones de acción */}
+                <Stack spacing={2} alignItems="center">
+                  <Button
+                    onClick={handleAddToCart}
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    disabled={selectedQuantity === 0}
+                    startIcon={<CartIcon />}
+                    sx={{
+                      py: 1.8,
+                      fontSize: "1.1rem",
+                      fontWeight: "bold",
+                      boxShadow: 3,
+                      maxWidth: 500,
+                      width: "100%",
+                      "&:hover": { boxShadow: 6 },
+                    }}
+                  >
+                    Añadir al carrito
+                  </Button>
+
+                  {productInCart && (
+                    <Button
+                      onClick={handleRemoveFromCart}
+                      variant="outlined"
+                      color="error"
+                      size="large"
+                      sx={{
+                        py: 1.5,
+                        maxWidth: 500,
+                        width: "100%",
+                      }}
+                    >
+                      Eliminar del carrito
+                    </Button>
+                  )}
+                </Stack>
+
+                {/* Info del carrito */}
+                <Stack spacing={2} alignItems="center">
+                  {cartQuantity > 0 && (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        backgroundColor: "info.light",
+                        borderRadius: 2,
+                        maxWidth: 500,
+                        width: "100%",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="info.dark"
+                        textAlign="center"
+                      >
+                        Ya tienes <strong>{cartQuantity}</strong>{" "}
+                        {cartQuantity === 1 ? "unidad" : "unidades"} en el
+                        carrito
+                      </Typography>
+                    </Paper>
+                  )}
+                </Stack>
+              </Stack>
+            </Box>
+          </Paper>
+
+          {/* Variantes */}
+          {variantes.length > 0 && (
+            <Paper elevation={2} sx={{ p: 4, mb: 3, borderRadius: 3 }}>
+              <Box sx={{ maxWidth: 900, mx: "auto" }}>
+                <Typography
+                  variant="h5"
+                  gutterBottom
+                  fontWeight="bold"
+                  sx={{ mb: 3, textAlign: "center" }}
+                >
+                  Variantes disponibles
+                </Typography>
+                <Grid container spacing={2} justifyContent="center">
+                  {variantes.map((variante) => (
+                    <Grid item xs={12} sm={6} md={4} key={variante.id}>
+                      <Card
+                        elevation={0}
+                        sx={{
+                          p: 2.5,
+                          border: "1px solid #e0e0e0",
+                          opacity: variante.stock === 0 ? 0.5 : 1,
+                          transition: "all 0.2s",
+                          "&:hover": {
+                            boxShadow: 3,
+                            transform:
+                              variante.stock > 0 ? "translateY(-4px)" : "none",
+                          },
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          fontWeight="medium"
+                          gutterBottom
+                        >
+                          {variante.nombre}
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          color="primary"
+                          fontWeight="bold"
+                          sx={{ mb: 1 }}
+                        >
+                          ${variante.precio}
+                        </Typography>
+                        <Chip
+                          label={
+                            variante.stock === 0
+                              ? "Sin stock"
+                              : `${variante.stock} disponibles`
+                          }
+                          color={variante.stock === 0 ? "error" : "success"}
+                          size="small"
+                        />
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            </Paper>
+          )}
+
+          {/* Comentarios */}
+          <Paper elevation={2} sx={{ p: 4, borderRadius: 3 }}>
+            <Box sx={{ maxWidth: 900, mx: "auto" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 3,
+                  flexWrap: "wrap",
+                  gap: 2,
+                }}
+              >
+                <Typography variant="h5" fontWeight="bold">
+                  Comentarios del producto ({mensajes.length})
+                </Typography>
+                <Chip
+                  label={isConnected ? "En vivo" : "Desconectado"}
+                  color={isConnected ? "success" : "error"}
+                  size="small"
+                  sx={{ fontWeight: "bold" }}
+                />
+              </Box>
+
+              {/* Formulario de comentario */}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  border: "1px solid #e0e0e0",
+                  backgroundColor: "#fafafa",
+                  borderRadius: 2,
+                }}
+              >
+                <Typography variant="h6" gutterBottom fontWeight="medium">
+                  Escribir un comentario
+                </Typography>
+                <TextField
+                  value={nuevoMensaje}
+                  onChange={(e) => setNuevoMensaje(e.target.value)}
+                  fullWidth
+                  multiline
+                  rows={3}
+                  placeholder="Comparte tu opinión sobre este producto..."
+                  sx={{
+                    mb: 2,
+                    backgroundColor: "white",
+                    borderRadius: 1,
+                  }}
+                />
+                <Button
+                  onClick={enviarMensaje}
+                  variant="contained"
+                  color="primary"
+                  disabled={!nuevoMensaje.trim()}
+                  size="large"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Publicar Comentario
+                </Button>
+              </Paper>
+
+              {/* Lista de comentarios */}
+              <Paper
+                elevation={0}
+                sx={{
+                  border: "1px solid #e0e0e0",
+                  borderRadius: 2,
+                  overflow: "hidden",
+                }}
+              >
+                {mensajes.length === 0 ? (
+                  <Box sx={{ p: 6, textAlign: "center" }}>
                     <Typography
                       variant="h6"
                       color="text.secondary"
-                      sx={{ textDecoration: "line-through" }}
+                      gutterBottom
                     >
-                      ${producto?.precio.toFixed(2)}
+                      No hay comentarios aún
                     </Typography>
-                    <Typography variant="h4" color="error" fontWeight="bold">
-                      ${precioFinal.toFixed(2)}
+                    <Typography variant="body2" color="text.secondary">
+                      ¡Sé el primero en compartir tu opinión!
                     </Typography>
-                    <Typography variant="body2" color="success.main" fontWeight="bold">
-                      ¡Ahorrás ${(producto?.precio - precioFinal).toFixed(2)}!
-                    </Typography>
-                  </>
+                  </Box>
                 ) : (
-                  <Typography variant="h4" fontWeight="bold" color="primary">
-                    ${producto?.precio.toFixed(2)}
-                  </Typography>
+                  <List sx={{ p: 0 }}>
+                    {mensajes.map((msg, i) => (
+                      <ListItem
+                        key={i}
+                        divider={i < mensajes.length - 1}
+                        sx={{
+                          py: 2.5,
+                          px: 3,
+                          "&:hover": { backgroundColor: "#fafafa" },
+                        }}
+                      >
+                        <ListItemText
+                          primary={
+                            <Typography variant="body1" sx={{ mb: 0.5 }}>
+                              {msg.texto}
+                            </Typography>
+                          }
+                          secondary={
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Usuario anónimo
+                            </Typography>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
                 )}
-              </Box>
-
-              {/* Stock disponible */}
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Stock disponible: {producto?.stock} unidades
-              </Typography>
-
-              {/* Controles de cantidad y carrito */}
-<Paper 
-  sx={{ 
-    p: 1, 
-    mb: 1, 
-    borderRadius: 2, 
-    boxShadow: 3 
-  }}
->
-    <Box 
-    sx={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: 1, 
-      m: 1,
-      justifyContent: 'center'
-    }}
-  >
-    <IconButton
-      onClick={() => handleQuantityChange('decrement')}
-      disabled={selectedQuantity === 0}
-      color="primary"
-      sx={{ 
-        border: '1px solid',
-        borderColor: 'primary.main',
-        borderRadius: 1,
-        '&:hover': { backgroundColor: 'primary.light' },
-        '&:disabled': { borderColor: 'grey.300', color: 'grey.400' },
-        width: 40,
-        height: 40
-      }}
-    >
-      <RemoveIcon />
-    </IconButton>
-    
-    <Typography
-      variant="h6"
-      sx={{
-        minWidth: 40,
-        textAlign: 'center',
-        fontWeight: 'bold'
-      }}
-    >
-      {selectedQuantity}
-    </Typography>
-    
-    <IconButton
-      onClick={() => handleQuantityChange('increment')}
-      color="primary"
-      disabled={selectedQuantity >= (producto?.stock || 0)}
-      sx={{ 
-        border: '1px solid',
-        borderColor: 'primary.main',
-        borderRadius: 1,
-        '&:hover': { backgroundColor: 'primary.light' },
-        '&:disabled': { borderColor: 'grey.300', color: 'grey.400' },
-        width: 40,
-        height: 40
-      }}
-    >
-      <AddIcon />
-    </IconButton>
-  </Box>
-
-  {selectedQuantity > 0 && (
-    <Typography
-      variant="body1"
-      color="success.main"
-      fontWeight="bold"
-      textAlign="center"
-    >
-      Subtotal: ${(precioFinal * selectedQuantity).toFixed(2)}
-    </Typography>
-  )}
-
-  {cartQuantity > 0 && (
-    <Typography
-      variant="body2"
-      color="primary"
-      fontWeight="medium"
-      textAlign="center"
-      sx={{ mt: 1 }}
-    >
-      En carrito: {cartQuantity} unidad{cartQuantity !== 1 ? 'es' : ''}
-    </Typography>
-  )}
-</Paper>
-
-
-              {/* Botón principal de carrito */}
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleAddToCart}
-                size="large"
-                fullWidth
-                disabled={selectedQuantity === 0}
-                sx={{ mb: 2, py: 1.5 }}
-              >
-                Añadir al carrito
-              </Button>
-
-              {productInCart && (
-                <Button 
-                  variant="outlined" 
-                  color="error" 
-                  onClick={handleRemoveFromCart}
-                  size="large"
-                  fullWidth
-                >
-                  Eliminar del carrito
-                </Button>
-              )}
+              </Paper>
             </Box>
-          </Grid>
-        </Grid>
-
-        <Divider sx={{ my: 4 }} />
-
-        {/* Sección de variantes */}
-        {variantes.length > 0 && (
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h5" gutterBottom fontWeight="bold">
-              Variantes disponibles
-            </Typography>
-            <Grid container spacing={2}>
-              {variantes.map((variante) => (
-                <Grid item xs={12} sm={6} md={4} key={variante.id}>
-                  <Card sx={{ p: 2, opacity: variante.stock === 0 ? 0.5 : 1 }}>
-                    <Typography variant="h6">{variante.nombre}</Typography>
-                    <Typography variant="body1" color="primary" fontWeight="bold">
-                      ${variante.precio}
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      color={variante.stock === 0 ? "error" : "text.secondary"}
-                    >
-                      Stock: {variante.stock} unidades
-                      {variante.stock === 0 && " (No disponible)"}
-                    </Typography>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        )}
-
-        {/* Sección de mensajes */}
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Typography variant="h5" gutterBottom fontWeight="bold" sx={{ mb: 0 }}>
-              Comentarios del producto
-            </Typography>
-            <Chip
-              label={isConnected ? "  " : ""}
-              color={isConnected ? "success" : "error"}
-              size="small"
-            />
-          </Box>
-
-          {/* Formulario para nuevo mensaje */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Escribir un comentario
-            </Typography>
-            <TextField
-              value={nuevoMensaje}
-              onChange={(e) => setNuevoMensaje(e.target.value)}
-              fullWidth
-              multiline
-              rows={3}
-              placeholder="Comparte tu opinión sobre este producto..."
-              sx={{ mb: 2 }}
-            />
-            <Button
-              onClick={enviarMensaje}
-              variant="contained"
-              color="primary"
-              disabled={!nuevoMensaje.trim()}
-            >
-              Enviar Comentario
-            </Button>
           </Paper>
-
-          {/* Lista de mensajes */}
-          <Paper sx={{ p: 2 }}>
-            {mensajes.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
-                No hay comentarios aún. ¡Sé el primero en comentar!
-              </Typography>
-            ) : (
-              <List>
-                {mensajes.map((msg, i) => (
-                  <ListItem key={i} divider={i < mensajes.length - 1}>
-                    <ListItemText
-                      primary={msg.texto}
-                      secondary="Usuario anónimo" // Podrías agregar fecha/usuario aquí
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            )}
-          </Paper>
-        </Box>
-      </Container>
+        </Container>
+      </Box>
       <Footer />
     </>
   );
 };
-
 export default ProductoDetalle;

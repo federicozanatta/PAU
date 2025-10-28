@@ -1,78 +1,39 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Container, Stepper, Step, StepLabel, Box, Paper } from '@mui/material';
-import { useAuth } from '../../contexts/Auth.context';
-import { useCart } from '../../contexts/Cart.context';
-import Header from '../Header';
-import Footer from '../Footer';
+// src/components/checkout/ShippingForm.jsx
+import { useState } from 'react';
+import { Box, TextField, Button, Typography } from '@mui/material';
 
-import PaymentScreen from '../../components/checkout/PaymentScreen';
-import OrderConfirmation from '../../components/checkout/OrderConfirmation';
+const ShippingForm = ({ onNext }) => {
+  const [formData, setFormData] = useState({
+    calle: '',
+    numeracion: '',
+    ciudad: '',
+    provincia: '',
+    codigo_postal: ''
+  });
 
-const steps = ['Dirección de Envío', 'Pago', 'Confirmación'];
-
-const Checkout = () => {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const { cartItems } = useCart();
-  const [activeStep, setActiveStep] = useState(0);
-  const [shippingData, setShippingData] = useState(null);
-  const [orderData, setOrderData] = useState(null);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/', { state: { openLogin: true } });
-    }
-
-    if (cartItems.length === 0 && activeStep === 0) {
-      navigate('/');
-    }
-  }, [isAuthenticated, cartItems, activeStep, navigate]);
-
-  const handleNext = (data) => {
-    if (activeStep === 0) {
-      setShippingData(data);
-    } else if (activeStep === 1) {
-      setOrderData(data);
-    }
-    setActiveStep((prevStep) => prevStep + 1);
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
-  const handleBack = () => {
-    setActiveStep((prevStep) => prevStep - 1);
-  };
-
-  const getStepContent = (step) => {
-    switch (step) {
-      case 0:
-        return <ShippingForm onNext={handleNext} />;
-      case 1:
-        return <PaymentScreen onNext={handleNext} onBack={handleBack} shippingData={shippingData} />;
-      case 2:
-        return <OrderConfirmation orderData={orderData} />;
-      default:
-        return 'Paso desconocido';
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onNext(formData); // envía los datos al Checkout
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Header />
-      <Container maxWidth="lg" sx={{ py: 4, flexGrow: 1 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-          {getStepContent(activeStep)}
-        </Paper>
-      </Container>
-      <Footer />
+    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Typography variant="h5" gutterBottom>Dirección de Envío</Typography>
+      <TextField label="Calle" name="calle" value={formData.calle} onChange={handleChange} required />
+      <TextField label="Número" name="numeracion" value={formData.numeracion} onChange={handleChange} required />
+      <TextField label="Ciudad" name="ciudad" value={formData.ciudad} onChange={handleChange} required />
+      <TextField label="Provincia" name="provincia" value={formData.provincia} onChange={handleChange} required />
+      <TextField label="Código Postal" name="codigo_postal" value={formData.codigo_postal} onChange={handleChange} required />
+      <Button type="submit" variant="contained">Continuar</Button>
     </Box>
   );
 };
 
-export default Checkout;
+export default ShippingForm;

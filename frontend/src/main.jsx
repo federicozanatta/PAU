@@ -7,6 +7,7 @@ import { CuponProviderWrapper } from "./contexts/Cupon.context.jsx";
 import { AuthProvider } from "./contexts/Auth.context.jsx";
 import { CartProvider } from "./contexts/Cart.context.jsx";
 
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <AuthProvider>

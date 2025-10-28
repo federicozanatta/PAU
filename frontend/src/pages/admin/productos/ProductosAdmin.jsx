@@ -101,13 +101,7 @@ const ProductosAdmin = () => {
         idAdministrador: product.idAdministrador,
       });
 
-      // Debug: ver qué tipo de dato es imagenes
-      console.log("product.imagenes:", product.imagenes);
-      console.log("typeof product.imagenes:", typeof product.imagenes);
-      console.log(
-        "Array.isArray(product.imagenes):",
-        Array.isArray(product.imagenes)
-      );
+    
 
       // Normalizar imagenes - puede venir como string o array
       let imagenesArray = [];

@@ -25,9 +25,6 @@ const Hero = () => {
       <Typography variant="h6" color="accent" sx={{ mt: 2 }}>
         ¡Descuento especial para docentes que abonen con Mercado Pago!
       </Typography>
-      <Button variant="contained" color="secondary" sx={{ mt: 3 }}>
-        Comprar Ahora
-      </Button>
     </Box>
   );
 };

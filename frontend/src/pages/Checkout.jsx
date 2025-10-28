@@ -1,3 +1,4 @@
+// src/pages/Checkout.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Stepper, Step, StepLabel, Box, Paper } from '@mui/material';
@@ -20,38 +21,24 @@ const Checkout = () => {
   const [orderData, setOrderData] = useState(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/', { state: { openLogin: true } });
-    }
-
-    if (cartItems.length === 0 && activeStep === 0) {
-      navigate('/');
-    }
+    if (!isAuthenticated) navigate('/', { state: { openLogin: true } });
+    if (cartItems.length === 0 && activeStep === 0) navigate('/');
   }, [isAuthenticated, cartItems, activeStep, navigate]);
 
   const handleNext = (data) => {
-    if (activeStep === 0) {
-      setShippingData(data);
-    } else if (activeStep === 1) {
-      setOrderData(data);
-    }
-    setActiveStep((prevStep) => prevStep + 1);
+    if (activeStep === 0) setShippingData(data);
+    if (activeStep === 1) setOrderData(data);
+    setActiveStep((prev) => prev + 1);
   };
 
-  const handleBack = () => {
-    setActiveStep((prevStep) => prevStep - 1);
-  };
+  const handleBack = () => setActiveStep((prev) => prev - 1);
 
   const getStepContent = (step) => {
     switch (step) {
-      case 0:
-        return <ShippingForm onNext={handleNext} />;
-      case 1:
-        return <PaymentScreen onNext={handleNext} onBack={handleBack} shippingData={shippingData} />;
-      case 2:
-        return <OrderConfirmation orderData={orderData} />;
-      default:
-        return 'Paso desconocido';
+      case 0: return <ShippingForm onNext={handleNext} />;
+      case 1: return <PaymentScreen onNext={handleNext} onBack={handleBack} shippingData={shippingData} />;
+      case 2: return <OrderConfirmation orderData={orderData} />;
+      default: return 'Paso desconocido';
     }
   };
 
@@ -62,9 +49,7 @@ const Checkout = () => {
         <Paper elevation={3} sx={{ p: 4 }}>
           <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
             {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
+              <Step key={label}><StepLabel>{label}</StepLabel></Step>
             ))}
           </Stepper>
           {getStepContent(activeStep)}

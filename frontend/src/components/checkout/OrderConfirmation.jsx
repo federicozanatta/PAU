@@ -1,3 +1,4 @@
+// src/components/checkout/OrderConfirmation.jsx
 import { Box, Typography, Button, Paper, Alert } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -6,13 +7,10 @@ const OrderConfirmation = ({ orderData }) => {
   const navigate = useNavigate();
 
   return (
+  <>
     <Box sx={{ textAlign: 'center', py: 4 }}>
       <CheckCircleIcon color="success" sx={{ fontSize: 80, mb: 2 }} />
-
-      <Typography variant="h4" gutterBottom>
-        ¡Pedido Confirmado!
-      </Typography>
-
+      <Typography variant="h4" gutterBottom>¡Pedido Confirmado!</Typography>
       <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
         Número de Pedido: #{orderData?.pedidoId}
       </Typography>
@@ -24,18 +22,14 @@ const OrderConfirmation = ({ orderData }) => {
         </Alert>
 
         <Box sx={{ textAlign: 'left', mb: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">
-            Total pagado:
-          </Typography>
+          <Typography variant="subtitle2" color="text.secondary">Total pagado:</Typography>
           <Typography variant="h5" color="primary" fontWeight="bold">
             ${orderData?.total?.toFixed(2)}
           </Typography>
         </Box>
 
         <Box sx={{ textAlign: 'left' }}>
-          <Typography variant="subtitle2" color="text.secondary">
-            Dirección de envío:
-          </Typography>
+          <Typography variant="subtitle2" color="text.secondary">Dirección de envío:</Typography>
           <Typography variant="body1">
             {orderData?.shippingData?.calle} {orderData?.shippingData?.numeracion}
           </Typography>
@@ -50,15 +44,11 @@ const OrderConfirmation = ({ orderData }) => {
         </Box>
       </Paper>
 
-      <Button
-        variant="contained"
-        size="large"
-        onClick={() => navigate('/')}
-      >
+      <Button variant="contained" size="large" onClick={() => navigate('/')}>
         Volver al Inicio
       </Button>
     </Box>
-  );
-};
-
+  </>
+);
+}
 export default OrderConfirmation;
